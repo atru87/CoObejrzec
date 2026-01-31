@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Script from 'next/script';
 import Quiz from '@/components/Quiz/Quiz';
 import MovieCard from '@/components/MovieCard/MovieCard';
 import WatchLaterList from '@/components/WatchLater/WatchLaterList';
@@ -199,10 +200,18 @@ export default function Home() {
               Zacznij darmowy quiz
             </motion.button>
 
-            {/* AdSense Placement - Widoczny pod przyciskiem Start */}
-            <div className="w-full h-32 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex items-center justify-center text-slate-400 text-sm mb-12">
-              Reklama (Główna)
+            {/* AdSense Placement */}
+            <div className="w-full flex justify-center mb-12">
+              <ins className="adsbygoogle"
+                   style={{ display: 'block' }}
+                   data-ad-client="ca-pub-4321819036207321"
+                   data-ad-slot="1234567890"
+                   data-ad-format="auto"
+                   data-full-width-responsive="true"></ins>
             </div>
+            <Script id="adsense-init" strategy="afterInteractive">
+              {`(adsbygoogle = window.adsbygoogle || []).push({});`}
+            </Script>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[

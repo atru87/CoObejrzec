@@ -58,6 +58,9 @@ export default function RootLayout({
                 <Link href="/premiery" className="hover:text-indigo-600 transition-colors">
                   Premiery
                 </Link>
+                <Link href="/filmy" className="hover:text-indigo-600 transition-colors">
+                  Baza filmów
+                </Link>
               </div>
             </div>
 
@@ -98,19 +101,18 @@ export default function RootLayout({
                 </p>
               </div>
               <div>
-                <h4 className="font-bold mb-4">Odkrywaj</h4>
+                <h4 className="font-bold mb-4">Baza filmów</h4>
                 <ul className="space-y-2 text-slate-500 text-sm">
-                  <li><Link href="/rankingi" className="hover:text-indigo-600">Najlepsze horrory 2026</Link></li>
-                  <li><Link href="/rankingi" className="hover:text-indigo-600">Komedie na wieczór</Link></li>
-                  <li><Link href="/rankingi" className="hover:text-indigo-600">Ranking Netflix</Link></li>
+                  <li><Link href="/filmy" className="hover:text-indigo-600">Wszystkie filmy A-Z</Link></li>
+                  <li><Link href="/rankingi" className="hover:text-indigo-600">TOP 100</Link></li>
+                  <li><Link href="/premiery" className="hover:text-indigo-600">Najnowsze premiery</Link></li>
                 </ul>
               </div>
               <div>
                 <h4 className="font-bold mb-4">Informacje</h4>
                 <ul className="space-y-2 text-slate-500 text-sm">
-                  <li><Link href="/polityka-prywatnosci" className="hover:text-indigo-600">Polityka prywatności</Link></li>
-                  <li><Link href="/kontakt" className="hover:text-indigo-600">Kontakt</Link></li>
                   <li><span className="text-xs">Dane dostarcza TMDb API</span></li>
+                  <li><span className="text-xs">Reklamy: Google AdSense</span></li>
                 </ul>
               </div>
             </div>
