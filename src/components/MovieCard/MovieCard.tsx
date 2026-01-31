@@ -50,7 +50,7 @@ export default function MovieCard({
             <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-sm 
                          px-3 py-1.5 rounded-full flex items-center gap-1">
               <span className="text-yellow-400 text-lg">⭐</span>
-              <span className="text-white font-bold">{movie.rating.toFixed(1)}</span>
+              <span className="text-white font-bold">{parseFloat(movie.rating as any).toFixed(1)}</span>
             </div>
           </div>
 
