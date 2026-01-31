@@ -250,7 +250,7 @@ export function getRandomRecommendation(excludeIds: number[] = []): Movie | null
 /**
  * Zwraca N rekomendacji
  */
-export function getMultipleRecommendations(
+export async function getMultipleRecommendations(
   answers: QuizAnswers,
   excludeIds: number[] = [],
   count: number = 10
@@ -290,7 +290,7 @@ export function getMultipleRecommendations(
     criteria.minRating = 7.0;
   }
   
-  const candidates = searchMovies(criteria);
+  const candidates = await searchMovies(criteria);
   if (candidates.length === 0) return [];
   
   // Score inline

@@ -12,6 +12,9 @@
     "setup": "npm run fetch-movies && npm run setup-db"
   },
   "dependencies": {
+    "@vercel/postgres": "^0.10.0",
+    "better-sqlite3": "^12.6.2",
+    "dotenv": "^17.2.3",
     "framer-motion": "^11.0.3",
     "next": "^14.1.0",
     "react": "^18.2.0",

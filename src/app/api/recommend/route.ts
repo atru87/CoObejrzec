@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const recommendations = getMultipleRecommendations(answers as QuizAnswers, excludeIds, count);
+    const recommendations = await getMultipleRecommendations(answers as QuizAnswers, excludeIds, count);
     
     if (!recommendations || recommendations.length === 0) {
       return NextResponse.json(

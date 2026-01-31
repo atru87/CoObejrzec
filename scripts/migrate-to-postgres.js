@@ -1,3 +1,4 @@
+require('dotenv').config({ path: '.env.local' });
 const Database = require('better-sqlite3');
 const { sql } = require('@vercel/postgres');
 const path = require('path');

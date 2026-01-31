@@ -1,58 +1,6 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { sql } from '@vercel/postgres';
 import { Movie } from './types';
 
-let db: Database.Database | null = null;
-
-/**
- * Singleton połączenia z bazą danych
- */
-export function getDatabase(): Database.Database {
-  if (!db) {
-    const dbPath = path.join(process.cwd(), 'data', 'movies.db');
-    db = new Database(dbPath, { readonly: true });
-    db.pragma('journal_mode = WAL');
-  }
-  return db;
-}
-
-/**
- * Pobiera film po ID wraz z gatunkami i krajami
- */
-export function getMovieById(id: number): Movie | null {
-  const db = getDatabase();
-  
-  const movie = db.prepare(`
-    SELECT * FROM movies WHERE id = ?
-  `).get(id) as any;
-  
-  if (!movie) return null;
-  
-  const genres = db.prepare(`
-    SELECT g.name
-    FROM genres g
-    JOIN movie_genres mg ON g.id = mg.genre_id
-    WHERE mg.movie_id = ?
-  `).all(id).map((row: any) => row.name);
-  
-  const countries = db.prepare(`
-    SELECT c.code
-    FROM countries c
-    JOIN movie_countries mc ON c.id = mc.country_id
-    WHERE mc.movie_id = ?
-  `).all(id).map((row: any) => row.code);
-  
-  return {
-    ...movie,
-    is_polish: movie.is_polish === 1,
-    genres,
-    countries,
-  };
-}
-
-/**
- * Wyszukuje filmy według kryteriów
- */
 export interface SearchCriteria {
   genres?: string[];
   minYear?: number;
@@ -68,155 +16,202 @@ export interface SearchCriteria {
   keywords?: string[];
 }
 
-export function searchMovies(criteria: SearchCriteria): Movie[] {
-  const db = getDatabase();
-  
-  let sql = `
-    SELECT DISTINCT m.*
-    FROM movies m
-  `;
-  
-  const conditions: string[] = [];
-  const params: any[] = [];
-  
-  // Filtrowanie po gatunkach
-  if (criteria.genres && criteria.genres.length > 0) {
-    sql += `
-      JOIN movie_genres mg ON m.id = mg.movie_id
-      JOIN genres g ON mg.genre_id = g.id
+/**
+ * Pobiera film po ID
+ */
+export async function getMovieById(id: number): Promise<Movie | null> {
+  try {
+    const { rows } = await sql`
+      SELECT 
+        m.*,
+        COALESCE(
+          json_agg(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL),
+          '[]'
+        ) as genres,
+        COALESCE(
+          json_agg(DISTINCT c.code) FILTER (WHERE c.code IS NOT NULL),
+          '[]'
+        ) as countries
+      FROM movies m
+      LEFT JOIN movie_genres mg ON m.id = mg.movie_id
+      LEFT JOIN genres g ON mg.genre_id = g.id
+      LEFT JOIN movie_countries mc ON m.id = mc.movie_id
+      LEFT JOIN countries c ON mc.country_id = c.id
+      WHERE m.id = ${id}
+      GROUP BY m.id
     `;
-    conditions.push(`g.name IN (${criteria.genres.map(() => '?').join(',')})`);
-    params.push(...criteria.genres);
-  }
-  
-  // Filtrowanie po keywords (dla mood)
-  if (criteria.keywords && criteria.keywords.length > 0) {
-    sql += `
-      JOIN movie_keywords mk ON m.id = mk.movie_id
-      JOIN keywords k ON mk.keyword_id = k.id
-    `;
-    conditions.push(`k.name IN (${criteria.keywords.map(() => '?').join(',')})`);
-    params.push(...criteria.keywords);
-  }
-  
-  sql += ' WHERE 1=1 ';
-  
-  // Rok
-  if (criteria.minYear) {
-    conditions.push('m.year >= ?');
-    params.push(criteria.minYear);
-  }
-  if (criteria.maxYear) {
-    conditions.push('m.year <= ?');
-    params.push(criteria.maxYear);
-  }
-  
-  // Ocena
-  if (criteria.minRating) {
-    conditions.push('m.rating >= ?');
-    params.push(criteria.minRating);
-  }
-  
-  // Polski/zagraniczny
-  if (criteria.isPolish !== undefined) {
-    conditions.push('m.is_polish = ?');
-    params.push(criteria.isPolish ? 1 : 0);
-  }
-  
-  // Długość
-  if (criteria.minRuntime) {
-    conditions.push('m.runtime >= ?');
-    params.push(criteria.minRuntime);
-  }
-  if (criteria.maxRuntime) {
-    conditions.push('m.runtime <= ?');
-    params.push(criteria.maxRuntime);
-  }
-  
-  // Popularność
-  if (criteria.minPopularity) {
-    conditions.push('m.popularity >= ?');
-    params.push(criteria.minPopularity);
-  }
-  if (criteria.maxPopularity) {
-    conditions.push('m.popularity <= ?');
-    params.push(criteria.maxPopularity);
-  }
-  
-  // Wyklucz filmy
-  if (criteria.excludeIds && criteria.excludeIds.length > 0) {
-    conditions.push(`m.id NOT IN (${criteria.excludeIds.map(() => '?').join(',')})`);
-    params.push(...criteria.excludeIds);
-  }
-  
-  // Dodaj warunki
-  if (conditions.length > 0) {
-    sql += ' AND ' + conditions.join(' AND ');
-  }
-  
-  // Sortowanie i limit
-  sql += ' ORDER BY m.rating DESC, m.popularity DESC';
-  sql += ` LIMIT ${criteria.limit || 100}`;
-  
-  const rows = db.prepare(sql).all(...params) as any[];
-  
-  // Pobierz gatunki i kraje dla każdego filmu
-  return rows.map(row => {
-    const genres = db.prepare(`
-      SELECT g.name
-      FROM genres g
-      JOIN movie_genres mg ON g.id = mg.genre_id
-      WHERE mg.movie_id = ?
-    `).all(row.id).map((r: any) => r.name);
-    
-    const countries = db.prepare(`
-      SELECT c.code
-      FROM countries c
-      JOIN movie_countries mc ON c.id = mc.country_id
-      WHERE mc.movie_id = ?
-    `).all(row.id).map((r: any) => r.code);
-    
+
+    if (rows.length === 0) return null;
+
+    const movie = rows[0];
     return {
-      ...row,
-      is_polish: row.is_polish === 1,
-      genres,
-      countries,
+      ...movie,
+      is_polish: movie.is_polish,
+      genres: typeof movie.genres === 'string' ? JSON.parse(movie.genres) : movie.genres,
+      countries: typeof movie.countries === 'string' ? JSON.parse(movie.countries) : movie.countries,
     };
-  });
+  } catch (error) {
+    console.error('Error fetching movie:', error);
+    return null;
+  }
 }
 
 /**
- * Pobiera losowy film spełniający kryteria
+ * Wyszukuje filmy według kryteriów
  */
-export function getRandomMovie(criteria: SearchCriteria): Movie | null {
-  const movies = searchMovies({ ...criteria, limit: 50 });
+export async function searchMovies(criteria: SearchCriteria): Promise<Movie[]> {
+  try {
+    let query = `
+      SELECT DISTINCT
+        m.*,
+        COALESCE(
+          json_agg(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL),
+          '[]'
+        ) as genres,
+        COALESCE(
+          json_agg(DISTINCT c.code) FILTER (WHERE c.code IS NOT NULL),
+          '[]'
+        ) as countries
+      FROM movies m
+      LEFT JOIN movie_genres mg ON m.id = mg.movie_id
+      LEFT JOIN genres g ON mg.genre_id = g.id
+      LEFT JOIN movie_countries mc ON m.id = mc.movie_id
+      LEFT JOIN countries c ON mc.country_id = c.id
+    `;
+
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Gatunki
+    if (criteria.genres && criteria.genres.length > 0 && !criteria.genres.includes('any')) {
+      const placeholders = criteria.genres.map(() => `$${paramIndex++}`).join(',');
+      conditions.push(`g.name IN (${placeholders})`);
+      params.push(...criteria.genres);
+    }
+
+    // Rok
+    if (criteria.minYear) {
+      conditions.push(`m.year >= $${paramIndex++}`);
+      params.push(criteria.minYear);
+    }
+    if (criteria.maxYear) {
+      conditions.push(`m.year <= $${paramIndex++}`);
+      params.push(criteria.maxYear);
+    }
+
+    // Ocena
+    if (criteria.minRating) {
+      conditions.push(`m.rating >= $${paramIndex++}`);
+      params.push(criteria.minRating);
+    }
+
+    // Polski/zagraniczny
+    if (criteria.isPolish !== undefined) {
+      conditions.push(`m.is_polish = $${paramIndex++}`);
+      params.push(criteria.isPolish);
+    }
+
+    // Długość
+    if (criteria.minRuntime) {
+      conditions.push(`m.runtime >= $${paramIndex++}`);
+      params.push(criteria.minRuntime);
+    }
+    if (criteria.maxRuntime) {
+      conditions.push(`m.runtime <= $${paramIndex++}`);
+      params.push(criteria.maxRuntime);
+    }
+
+    // Popularność
+    if (criteria.minPopularity) {
+      conditions.push(`m.popularity >= $${paramIndex++}`);
+      params.push(criteria.minPopularity);
+    }
+    if (criteria.maxPopularity) {
+      conditions.push(`m.popularity <= $${paramIndex++}`);
+      params.push(criteria.maxPopularity);
+    }
+
+    // Wyklucz filmy
+    if (criteria.excludeIds && criteria.excludeIds.length > 0) {
+      const placeholders = criteria.excludeIds.map(() => `$${paramIndex++}`).join(',');
+      conditions.push(`m.id NOT IN (${placeholders})`);
+      params.push(...criteria.excludeIds);
+    }
+
+    // Warunki WHERE
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    // GROUP BY i ORDER BY
+    query += `
+      GROUP BY m.id
+      ORDER BY m.rating DESC, m.popularity DESC
+      LIMIT $${paramIndex}
+    `;
+    params.push(criteria.limit || 100);
+
+    const { rows } = await sql.query(query, params);
+
+    return rows.map((row: any) => ({
+      ...row,
+      is_polish: row.is_polish,
+      genres: typeof row.genres === 'string' ? JSON.parse(row.genres) : row.genres,
+      countries: typeof row.countries === 'string' ? JSON.parse(row.countries) : row.countries,
+    }));
+  } catch (error) {
+    console.error('Error searching movies:', error);
+    return [];
+  }
+}
+
+/**
+ * Pobiera losowy film
+ */
+export async function getRandomMovie(criteria: SearchCriteria): Promise<Movie | null> {
+  const movies = await searchMovies({ ...criteria, limit: 50 });
   if (movies.length === 0) return null;
-  
+
   const randomIndex = Math.floor(Math.random() * movies.length);
   return movies[randomIndex];
 }
 
 /**
- * Pobiera wszystkie dostępne gatunki
+ * Pobiera wszystkie gatunki
  */
-export function getAllGenres(): string[] {
-  const db = getDatabase();
-  const rows = db.prepare(`
-    SELECT name FROM genres ORDER BY name
-  `).all() as any[];
-  
-  return rows.map(row => row.name);
+export async function getAllGenres(): Promise<string[]> {
+  try {
+    const { rows } = await sql`
+      SELECT name FROM genres ORDER BY name
+    `;
+    return rows.map((row: any) => row.name);
+  } catch (error) {
+    console.error('Error fetching genres:', error);
+    return [];
+  }
 }
 
 /**
  * Statystyki bazy
  */
-export function getDatabaseStats() {
-  const db = getDatabase();
-  
-  return {
-    totalMovies: db.prepare('SELECT COUNT(*) as count FROM movies').get() as { count: number },
-    avgRating: db.prepare('SELECT AVG(rating) as avg FROM movies').get() as { avg: number },
-    genreCount: db.prepare('SELECT COUNT(*) as count FROM genres').get() as { count: number },
-  };
+export async function getDatabaseStats() {
+  try {
+    const { rows: movieCount } = await sql`SELECT COUNT(*) as count FROM movies`;
+    const { rows: avgRating } = await sql`SELECT AVG(rating) as avg FROM movies`;
+    const { rows: genreCount } = await sql`SELECT COUNT(*) as count FROM genres`;
+
+    return {
+      totalMovies: movieCount[0],
+      avgRating: avgRating[0],
+      genreCount: genreCount[0],
+    };
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    return {
+      totalMovies: { count: 0 },
+      avgRating: { avg: 0 },
+      genreCount: { count: 0 },
+    };
+  }
 }

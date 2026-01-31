@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // Pobierz film po ID
     if (id) {
-      const movie = getMovieById(parseInt(id));
+      const movie = await getMovieById(parseInt(id));
       
       if (!movie) {
         return NextResponse.json(
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const maxYear = searchParams.get('maxYear');
     const minRating = searchParams.get('minRating');
 
-    const movies = searchMovies({
+    const movies = await searchMovies({
       genres,
       minYear: minYear ? parseInt(minYear) : undefined,
       maxYear: maxYear ? parseInt(maxYear) : undefined,
