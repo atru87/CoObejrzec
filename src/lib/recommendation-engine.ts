@@ -146,7 +146,7 @@ export async function getMultipleRecommendations(
   answers: QuizAnswers,
   excludeIds: number[] = [],
   count: number = 10
-): RecommendationResult[] {
+): Promise<RecommendationResult[]> {
   const criteria: SearchCriteria = {
     excludeIds,
     limit: count * 10,
