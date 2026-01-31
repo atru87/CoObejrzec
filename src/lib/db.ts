@@ -49,7 +49,7 @@ export async function getMovieById(id: number): Promise<Movie | null> {
       is_polish: movie.is_polish,
       genres: typeof movie.genres === 'string' ? JSON.parse(movie.genres) : movie.genres,
       countries: typeof movie.countries === 'string' ? JSON.parse(movie.countries) : movie.countries,
-    };
+    } as Movie;
   } catch (error) {
     console.error('Error fetching movie:', error);
     return null;
@@ -159,7 +159,7 @@ export async function searchMovies(criteria: SearchCriteria): Promise<Movie[]> {
       is_polish: row.is_polish,
       genres: typeof row.genres === 'string' ? JSON.parse(row.genres) : row.genres,
       countries: typeof row.countries === 'string' ? JSON.parse(row.countries) : row.countries,
-    }));
+    } as Movie));
   } catch (error) {
     console.error('Error searching movies:', error);
     return [];
