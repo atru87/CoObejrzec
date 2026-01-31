@@ -62,7 +62,7 @@ export default function FilmPage() {
               <div className="md:w-1/3">
                 <img
                   src={movie.poster}
-                  alt={movie.title_pl}
+                  alt={movie.title_pl || movie.title}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -77,7 +77,9 @@ export default function FilmPage() {
               <h1 className="text-4xl font-black text-gray-900 mb-2">{movie.title_pl}</h1>
               
               {movie.title_original !== movie.title_pl && (
-                <p className="text-xl text-gray-500 mb-6">{movie.title_original}</p>
+                {movie.title_original && movie.title_original !== movie.title_pl && (
+				  <p className="text-xl text-gray-500 mb-6">{movie.title_original}</p>
+				)}
               )}
 
               <div className="flex items-center gap-6 mb-6">
