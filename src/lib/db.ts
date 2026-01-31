@@ -24,14 +24,8 @@ export async function getMovieById(id: number): Promise<Movie | null> {
     const { rows } = await sql`
       SELECT 
         m.*,
-        COALESCE(
-          json_agg(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL),
-          '[]'
-        ) as genres,
-        COALESCE(
-          json_agg(DISTINCT c.code) FILTER (WHERE c.code IS NOT NULL),
-          '[]'
-        ) as countries
+        ARRAY_AGG(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL) as genres,
+        ARRAY_AGG(DISTINCT c.code) FILTER (WHERE c.code IS NOT NULL) as countries
       FROM movies m
       LEFT JOIN movie_genres mg ON m.id = mg.movie_id
       LEFT JOIN genres g ON mg.genre_id = g.id
@@ -47,8 +41,8 @@ export async function getMovieById(id: number): Promise<Movie | null> {
     return {
       ...movie,
       is_polish: movie.is_polish,
-      genres: typeof movie.genres === 'string' ? JSON.parse(movie.genres) : movie.genres,
-      countries: typeof movie.countries === 'string' ? JSON.parse(movie.countries) : movie.countries,
+      genres: movie.genres || [],
+      countries: movie.countries || [],
     } as Movie;
   } catch (error) {
     console.error('Error fetching movie:', error);
@@ -61,35 +55,13 @@ export async function getMovieById(id: number): Promise<Movie | null> {
  */
 export async function searchMovies(criteria: SearchCriteria): Promise<Movie[]> {
   try {
-    let query = `
-      SELECT DISTINCT
-        m.*,
-        COALESCE(
-          json_agg(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL),
-          '[]'
-        ) as genres,
-        COALESCE(
-          json_agg(DISTINCT c.code) FILTER (WHERE c.code IS NOT NULL),
-          '[]'
-        ) as countries
-      FROM movies m
-      LEFT JOIN movie_genres mg ON m.id = mg.movie_id
-      LEFT JOIN genres g ON mg.genre_id = g.id
-      LEFT JOIN movie_countries mc ON m.id = mc.movie_id
-      LEFT JOIN countries c ON mc.country_id = c.id
-    `;
-
     const conditions: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
 
-    // Gatunki
-    if (criteria.genres && criteria.genres.length > 0 && !criteria.genres.includes('any')) {
-      const placeholders = criteria.genres.map(() => `$${paramIndex++}`).join(',');
-      conditions.push(`g.name IN (${placeholders})`);
-      params.push(...criteria.genres);
-    }
-
+    // Base query - filtruj na poziomie movies
+    let baseWhere = '';
+    
     // Rok
     if (criteria.minYear) {
       conditions.push(`m.year >= $${paramIndex++}`);
@@ -139,27 +111,66 @@ export async function searchMovies(criteria: SearchCriteria): Promise<Movie[]> {
       params.push(...criteria.excludeIds);
     }
 
-    // Warunki WHERE
     if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
+      baseWhere = ' WHERE ' + conditions.join(' AND ');
     }
 
-    // GROUP BY i ORDER BY
-    query += `
-      GROUP BY m.id
-      ORDER BY m.rating DESC, m.popularity DESC
-      LIMIT $${paramIndex}
-    `;
-    params.push(criteria.limit || 100);
+    // Jeśli są gatunki do filtrowania
+    if (criteria.genres && criteria.genres.length > 0 && !criteria.genres.includes('any')) {
+      const genrePlaceholders = criteria.genres.map(() => `$${paramIndex++}`).join(',');
+      params.push(...criteria.genres);
 
-    const { rows } = await sql.query(query, params);
+      const query = `
+        SELECT DISTINCT
+          m.*,
+          ARRAY_AGG(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL) as genres,
+          ARRAY_AGG(DISTINCT c.code) FILTER (WHERE c.code IS NOT NULL) as countries
+        FROM movies m
+        INNER JOIN movie_genres mg ON m.id = mg.movie_id
+        INNER JOIN genres g ON mg.genre_id = g.id AND g.name IN (${genrePlaceholders})
+        LEFT JOIN movie_countries mc ON m.id = mc.movie_id
+        LEFT JOIN countries c ON mc.country_id = c.id
+        ${baseWhere}
+        GROUP BY m.id
+        ORDER BY m.rating DESC, m.popularity DESC
+        LIMIT $${paramIndex}
+      `;
+      params.push(criteria.limit || 100);
 
-    return rows.map((row: any) => ({
-      ...row,
-      is_polish: row.is_polish,
-      genres: typeof row.genres === 'string' ? JSON.parse(row.genres) : row.genres,
-      countries: typeof row.countries === 'string' ? JSON.parse(row.countries) : row.countries,
-    } as Movie));
+      const { rows } = await sql.query(query, params);
+      return rows.map((row: any) => ({
+        ...row,
+        is_polish: row.is_polish,
+        genres: row.genres || [],
+        countries: row.countries || [],
+      } as Movie));
+    } else {
+      // Bez filtrowania gatunków
+      const query = `
+        SELECT DISTINCT
+          m.*,
+          ARRAY_AGG(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL) as genres,
+          ARRAY_AGG(DISTINCT c.code) FILTER (WHERE c.code IS NOT NULL) as countries
+        FROM movies m
+        LEFT JOIN movie_genres mg ON m.id = mg.movie_id
+        LEFT JOIN genres g ON mg.genre_id = g.id
+        LEFT JOIN movie_countries mc ON m.id = mc.movie_id
+        LEFT JOIN countries c ON mc.country_id = c.id
+        ${baseWhere}
+        GROUP BY m.id
+        ORDER BY m.rating DESC, m.popularity DESC
+        LIMIT $${paramIndex}
+      `;
+      params.push(criteria.limit || 100);
+
+      const { rows } = await sql.query(query, params);
+      return rows.map((row: any) => ({
+        ...row,
+        is_polish: row.is_polish,
+        genres: row.genres || [],
+        countries: row.countries || [],
+      } as Movie));
+    }
   } catch (error) {
     console.error('Error searching movies:', error);
     return [];

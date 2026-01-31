@@ -32,14 +32,6 @@ export default function Home() {
   const currentMovie = recommendedMovies[currentMovieIndex] || null;
   const hasMoreMovies = currentMovieIndex < recommendedMovies.length - 1;
 
-  // Track page view
-  useEffect(() => {
-    fetch('/api/views', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ page: 'home' })
-    });
-  }, []);
 
   const LOADING_MESSAGES = [
     "🎬 Wrzucam filmy na bęben...",

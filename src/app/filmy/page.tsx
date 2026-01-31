@@ -13,13 +13,6 @@ export default function FilmyPage() {
   const [sortBy, setSortBy] = useState<'title' | 'rating' | 'year'>('title');
 
   useEffect(() => {
-    // Zlicz wizytę
-    fetch('/api/views', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ page: 'filmy' })
-    });
-
     // Pobierz filmy
     fetch('/api/movies')
       .then(res => res.json())
