@@ -8,7 +8,7 @@ import { searchMovies, SearchCriteria } from './db';
  * 1. Filtrowanie - zawęża bazę do filmów spełniających twarde kryteria
  * 2. Scoring - przypisuje punkty za dopasowanie do preferencji
  */
-export function getRecommendation(
+export async function getRecommendation(
   answers: QuizAnswers,
   excludeIds: number[] = []
 ): RecommendationResult | null {
@@ -55,7 +55,7 @@ export function getRecommendation(
   }
   
   // Pobierz kandydatów
-  const candidates = searchMovies(criteria);
+  const candidates = await searchMovies(criteria);
   
   if (candidates.length === 0) return null;
   
