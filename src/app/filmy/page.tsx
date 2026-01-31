@@ -36,14 +36,14 @@ export default function FilmyPage() {
     // Filtruj
     if (search) {
       result = result.filter(m => 
-        m.title_pl.toLowerCase().includes(search.toLowerCase()) ||
-        m.title_original.toLowerCase().includes(search.toLowerCase())
+        (m.title_pl || m.title).toLowerCase().includes(search.toLowerCase()) ||
+        (m.title_original || m.title).toLowerCase().includes(search.toLowerCase())
       );
     }
 
     // Sortuj
     result.sort((a, b) => {
-      if (sortBy === 'title') return a.title_pl.localeCompare(b.title_pl, 'pl');
+      if (sortBy === 'title') return (a.title_pl || a.title).localeCompare(b.title_pl || b.title, 'pl');
       if (sortBy === 'rating') return b.rating - a.rating;
       if (sortBy === 'year') return (b.year || 0) - (a.year || 0);
       return 0;
@@ -116,13 +116,13 @@ export default function FilmyPage() {
                 {movie.poster && (
                   <img
                     src={movie.poster}
-                    alt={movie.title_pl}
+                    alt={movie.title_pl || movie.title}
                     className="w-24 h-36 object-cover rounded-lg"
                   />
                 )}
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">{movie.title_pl}</h3>
-                  {movie.title_original !== movie.title_pl && (
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">{movie.title_pl || movie.title}</h3>
+                  {movie.title_original && movie.title_original !== movie.title_pl && (
                     <p className="text-sm text-gray-500 mb-2">{movie.title_original}</p>
                   )}
                   <div className="flex items-center gap-3 mb-2">
