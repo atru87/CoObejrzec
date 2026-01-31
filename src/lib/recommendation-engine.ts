@@ -11,7 +11,7 @@ import { searchMovies, SearchCriteria } from './db';
 export async function getRecommendation(
   answers: QuizAnswers,
   excludeIds: number[] = []
-): RecommendationResult | null {
+): Promise<RecommendationResult | null> {
   
   // Faza 1: Zbuduj kryteria filtrowania
   const criteria: SearchCriteria = {
@@ -234,8 +234,8 @@ function checkMoodMatch(movie: Movie, mood: string): { matches: boolean; reason:
 /**
  * Losowa rekomendacja (tryb "coś totalnie innego")
  */
-export function getRandomRecommendation(excludeIds: number[] = []): Movie | null {
-  const movies = searchMovies({
+export async function getRandomRecommendation(excludeIds: number[] = []): Promise<Movie | null> {
+  const movies = await searchMovies({
     excludeIds,
     limit: 100,
     minRating: 6.5
