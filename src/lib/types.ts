@@ -9,7 +9,7 @@ export interface Movie {
   poster: string | null;
   backdrop: string | null;
   year: number | null;
-  rating: number;
+  rating: number | string; // Postgres zwraca NUMERIC jako string
   vote_count: number;
   popularity: number;
   runtime: number | null;
