@@ -52,7 +52,7 @@ export default function WatchLaterList() {
                   {movie.title_pl || movie.title}
                 </h4>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {movie.year} • ⭐ {movie.rating.toFixed(1)}
+                  {movie.year} • ⭐ {parseFloat(movie.rating as any).toFixed(1)}
                 </p>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {movie.genres.slice(0, 2).map((genre) => (
