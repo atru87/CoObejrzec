@@ -205,7 +205,7 @@ export default function Home() {
               <ins className="adsbygoogle"
                    style={{ display: 'block' }}
                    data-ad-client="ca-pub-4321819036207321"
-                   data-ad-slot="1234567890"
+                   data-ad-slot="9003821965"
                    data-ad-format="auto"
                    data-full-width-responsive="true"></ins>
             </div>
