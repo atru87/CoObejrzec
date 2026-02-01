@@ -76,7 +76,7 @@ function scoreAndPickBest(
     const reasons: string[] = [];
     
     // Bazowy score z oceny (0-10 punktów)
-    score += movie.rating;
+    score += parseFloat(movie.rating as any);
     
     // Bonus za gatunek (5 punktów za każdy matching)
     if (answers.genres.length > 0 && !answers.genres.includes('any')) {
@@ -101,7 +101,7 @@ function scoreAndPickBest(
     }
     
     // Bonus za wysoką ocenę (3 punkty za >8.0)
-    if (movie.rating >= 8.0) {
+    if (parseFloat(movie.rating as any) >= 8.0) {
       score += 3;
       reasons.push(`Wysoka ocena: ${movie.rating}/10`);
     }
@@ -207,10 +207,10 @@ export async function getMultipleRecommendations(
     }
     
     // Ocena
-    if (answers.rating === 'high' && movie.rating >= 7.5) {
+    if (answers.rating === 'high' && parseFloat(movie.rating as any) >= 7.5) {
       score += 5;
       reasons.push(`Wysoka ocena: ${movie.rating}/10`);
-    } else if (answers.rating === 'medium' && movie.rating >= 6.0) {
+    } else if (answers.rating === 'medium' && parseFloat(movie.rating as any) >= 6.0) {
       score += 3;
     }
     
@@ -224,7 +224,7 @@ export async function getMultipleRecommendations(
     }
     
     // Bonus za wysoką ocenę
-    if (movie.rating >= 8.0) {
+    if (parseFloat(movie.rating as any) >= 8.0) {
       score += 2;
     }
     
