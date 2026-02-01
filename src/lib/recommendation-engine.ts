@@ -233,5 +233,11 @@ export async function getMultipleRecommendations(
   
   scored.sort((a, b) => b.score - a.score);
   
-  return scored.slice(0, count);
+  // Wybierz losowe 10 z top 30 (jeśli jest tyle)
+  const topCandidates = scored.slice(0, Math.min(30, scored.length));
+  
+  // Shuffle top candidates
+  const shuffled = topCandidates.sort(() => Math.random() - 0.5);
+  
+  return shuffled.slice(0, count);
 }
